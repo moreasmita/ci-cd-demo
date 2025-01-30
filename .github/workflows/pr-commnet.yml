@@ -16,10 +16,11 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Checkout code
+      - name: Checkout PR Branch
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.issue.pull_request.head.ref }}
+          fetch-depth: 0  # Ensures full history in case of branch switching
 
       - name: Ensure PR is Approved
         id: check-approval
@@ -51,5 +52,5 @@ jobs:
               issue_number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: "✅ Lambda deployment triggered!"
+              body: "✅ Lambda deployment triggered on `${{ github.event.issue.pull_request.head.ref }}` branch!"
             });
