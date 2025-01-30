@@ -1,0 +1,50 @@
+name: Deploy Lambda on PR Comment
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  pull-requests: write
+  contents: write
+  issues: write
+
+jobs:
+  deploy-lambda:
+    if: startsWith(github.event.issue.html_url, 'https://github.com/${{ github.repository }}/pull/') &&
+        contains(github.event.comment.body, '/deploy-lambda')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Debug Payload
+        run: cat $GITHUB_EVENT_PATH
+
+      - name: Get PR Branch Name
+        id: pr_branch
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          PR_NUMBER=$(jq --raw-output .issue.number "$GITHUB_EVENT_PATH")
+          BRANCH_NAME=$(gh api repos/${{ github.repository }}/pulls/$PR_NUMBER --jq '.head.ref')
+          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+
+      - name: Checkout PR Branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BRANCH_NAME }}
+
+      - name: Deploy Lambda
+        run: |
+          echo "Deploying Lambda..."
+
+      - name: Comment Success
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: "🚀 Lambda deployment triggered successfully from branch `${{ env.BRANCH_NAME }}`!"
+            })
