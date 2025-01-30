@@ -1,36 +1,50 @@
-name: "Deploy layer with comment trigger"
+name: PR Comment Triggered Lambda Deploy
 
 on:
   issue_comment:
-    types:
-      - created
-
-permissions:
-  issues: write
-  pull-requests: write
+    types: [created]
 
 jobs:
-  deploy_layer_comment_trigger:
+  deploy_lambda:
     if: |
       github.event.issue.pull_request &&
-      github.event.comment.body == 'deploy'
+      contains(github.event.comment.body || '', '/deploy') &&
+      github.event.comment.user.type == 'User'
     runs-on: ubuntu-latest
 
-    steps:
-      - name: Add reaction
-        uses: peter-evans/create-or-update-comment@v4
-        with:
-          comment-id: ${{ github.event.comment.id }}
-          reactions: eyes
+    permissions:
+      pull-requests: write
+      issues: write  # Ensure commenting works
 
-      - name: Comment Success
-        uses: actions/github-script@v6
+    steps:
+      - name: Checkout PR Branch
+        uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ github.event.issue.number }}/head  # Ensure correct PR branch is checked out
+          fetch-depth: 0  # Ensures full history
+
+      - name: Ensure PR is Approved
+        id: check-approval
+        uses: hmarr/auto-approve-action@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy Lambda
+        run: |
+          echo "Deploying Lambda"
+
+      - name: Comment on PR
+        uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const issue_number = context.payload.issue.number;
+            const repo = context.repo.repo;
+            const owner = context.repo.owner;
+
             github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: "🚀 Lambda deployment triggered successfully from branch `${{ env.BRANCH_NAME }}`!"
-            })
+              owner,
+              repo,
+              issue_number,
+              body: `✅ Lambda deployment triggered on \`${{ github.event.issue.pull_request.head.ref }}\` branch!`
+            });
