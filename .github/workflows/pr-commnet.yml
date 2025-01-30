@@ -35,7 +35,7 @@ jobs:
 
       - name: Deploy Lambda
         run: |
-          echo "Deploying Lambda..."
+          echo "Deploying Lambda...."
 
       - name: Comment Success
         uses: actions/github-script@v6
