@@ -13,6 +13,7 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
+
       pull-requests: write
       issues: write  # Ensure commenting works
 
@@ -20,7 +21,8 @@ jobs:
       - name: Checkout PR Branch
         uses: actions/checkout@v4
         with:
-          ref: refs/pull/${{ github.event.issue.number }}/head  # Ensure correct PR branch is checked out
+          # Ensure correct PR branch is checked out
+          ref: refs/pull/${{ github.event.issue.number }}/head
           fetch-depth: 0  # Ensures full history
 
       - name: Ensure PR is Approved
