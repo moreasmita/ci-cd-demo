@@ -17,13 +17,13 @@ jobs:
       issues: write  # Needed for commenting on PRs
 
     env:
-      PR_NUMBER: ${{ github.event.issue.number }}  # Explicitly pass PR number
+      PR_NUMBER: ${{ github.event.issue.number }}
 
     steps:
       - name: Checkout PR Branch
         uses: actions/checkout@v4
         with:
-          ref: refs/pull/${{ github.event.issue.number }}/head  # Correct branch reference
+          ref: refs/pull/${{ github.event.issue.number }}/head
           fetch-depth: 0  # Ensure full history
 
       - name: Ensure PR is Approved
