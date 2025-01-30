@@ -26,13 +26,6 @@ jobs:
           ref: refs/pull/${{ github.event.issue.number }}/head
           fetch-depth: 0  # Ensure full history
 
-      - name: Ensure PR is Approved
-        id: check-approval
-        uses: hmarr/auto-approve-action@v3
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          pull-request-number: ${{ github.event.issue.number }}  # Explicitly pass PR number
-
       - name: Deploy Lambda
         run: |
           echo "Deploying Lambda"
