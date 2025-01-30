@@ -1,36 +1,55 @@
-name: "Deploy layer with comment trigger"
+name: PR Comment Triggered Lambda Deploy
 
 on:
   issue_comment:
-    types:
-      - created
-
-permissions:
-  issues: write
-  pull-requests: write
+    types: [created]
 
 jobs:
-  deploy_layer_comment_trigger:
+  deploy_lambda:
     if: |
       github.event.issue.pull_request &&
-      github.event.comment.body == 'deploy'
+      contains(github.event.comment.body, '/deploy') &&
+      github.event.comment.user.type == 'User'
     runs-on: ubuntu-latest
 
-    steps:
-      - name: Add reaction
-        uses: peter-evans/create-or-update-comment@v4
-        with:
-          comment-id: ${{ github.event.comment.id }}
-          reactions: eyes
+    permissions:
+      pull-requests: write
 
-      - name: Comment Success
-        uses: actions/github-script@v6
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.issue.pull_request.head.ref }}
+
+      - name: Ensure PR is Approved
+        id: check-approval
+        uses: hmarr/auto-approve-action@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup AWS CLI
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy Lambda
+        run: |
+          chmod +x deploy-lambda.sh
+          ./deploy-lambda.sh
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+
+      - name: Comment on PR
+        uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const issue_number = context.issue.number;
             github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: "🚀 Lambda deployment triggered successfully from branch `${{ env.BRANCH_NAME }}`!"
-            })
+              issue_number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: "✅ Lambda deployment triggered!"
+            });
