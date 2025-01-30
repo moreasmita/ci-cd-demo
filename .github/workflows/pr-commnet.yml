@@ -13,23 +13,25 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-
       pull-requests: write
-      issues: write  # Ensure commenting works
+      issues: write  # Needed for commenting on PRs
+
+    env:
+      PR_NUMBER: ${{ github.event.issue.number }}  # Explicitly pass PR number
 
     steps:
       - name: Checkout PR Branch
         uses: actions/checkout@v4
         with:
-          # Ensure correct PR branch is checked out
-          ref: refs/pull/${{ github.event.issue.number }}/head
-          fetch-depth: 0  # Ensures full history
+          ref: refs/pull/${{ github.event.issue.number }}/head  # Correct branch reference
+          fetch-depth: 0  # Ensure full history
 
       - name: Ensure PR is Approved
         id: check-approval
         uses: hmarr/auto-approve-action@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ github.event.issue.number }}  # Explicitly pass PR number
 
       - name: Deploy Lambda
         run: |
@@ -41,12 +43,12 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const issue_number = context.payload.issue.number;
-            const repo = context.repo.repo;
             const owner = context.repo.owner;
+            const repo = context.repo.repo;
 
             github.rest.issues.createComment({
               owner,
               repo,
               issue_number,
-              body: `✅ Lambda deployment triggered on \`${{ github.event.issue.pull_request.head.ref }}\` branch!`
+              body: `✅ Lambda deployment triggered on \`${process.env.PR_NUMBER}\` branch!`
             });
