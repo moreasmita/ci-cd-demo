@@ -8,19 +8,20 @@ jobs:
   deploy_lambda:
     if: |
       github.event.issue.pull_request &&
-      contains(github.event.comment.body, '/deploy') &&
+      contains(github.event.comment.body || '', '/deploy') &&
       github.event.comment.user.type == 'User'
     runs-on: ubuntu-latest
 
     permissions:
       pull-requests: write
+      issues: write  # Ensure commenting works
 
     steps:
       - name: Checkout PR Branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.issue.pull_request.head.ref }}
-          fetch-depth: 0  # Ensures full history in case of branch switching
+          ref: refs/pull/${{ github.event.issue.number }}/head  # Ensure correct PR branch is checked out
+          fetch-depth: 0  # Ensures full history
 
       - name: Ensure PR is Approved
         id: check-approval
@@ -37,10 +38,13 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const issue_number = context.issue.number;
+            const issue_number = context.payload.issue.number;
+            const repo = context.repo.repo;
+            const owner = context.repo.owner;
+
             github.rest.issues.createComment({
+              owner,
+              repo,
               issue_number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: "✅ Lambda deployment triggered on `${{ github.event.issue.pull_request.head.ref }}` branch!"
+              body: `✅ Lambda deployment triggered on \`${{ github.event.issue.pull_request.head.ref }}\` branch!`
             });
